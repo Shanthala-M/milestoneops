@@ -1,5 +1,5 @@
 import re
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app import db
 from app.models import Project
 from app.audit_helper import log_action

@@ -125,3 +125,4 @@ class AuditLog(db.Model):
 
     def __repr__(self):
         return f"<AuditLog {self.entity_type}#{self.entity_id} {self.action}>"
+    

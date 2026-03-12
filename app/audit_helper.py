@@ -30,3 +30,4 @@ def log_action(entity_type, entity_id, action, changed_by="system",
     db.session.add(entry)
     # Flush so the audit row is part of the same transaction as the main change
     db.session.flush()
+    

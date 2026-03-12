@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} · MilestoneOps{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p style="font-size:12px; color:#888; margin-bottom:4px;">
+      <a href="{{ url_for('projects.list_projects') }}"
+         style="color:#888; text-decoration:none;">Projects</a>
+      / {{ project.name }}
+    </p>
+    <h1>{{ project.name }}</h1>
+    <p style="font-size:13px; color:#666; margin-top:4px;">
+      Owner: {{ project.owner }} &nbsp;·&nbsp;
+      Created: {{ project.created_at.strftime('%d %b %Y') }}
+    </p>
+  </div>
+  <div style="display:flex; gap:8px; align-items:center;">
+    {% if project.status == 'Active' %}
+      <span class="badge badge-success">{{ project.status }}</span>
+    {% elif project.status == 'On Hold' %}
+      <span class="badge badge-warning">{{ project.status }}</span>
+    {% else %}
+      <span class="badge badge-secondary">{{ project.status }}</span>
+    {% endif %}
+    <a href="{{ url_for('projects.edit_project', project_id=project.id) }}"
+       class="btn btn-warning btn-sm">Edit</a>
+    <form class="delete-form" method="POST"
+          action="{{ url_for('projects.delete_project', project_id=project.id) }}"
+          onsubmit="return confirm('Delete project {{ project.name }} and all its data?')">
+      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+    </form>
+  </div>
+</div>
+
+<!-- Stats -->
+{% set total_ms = project.milestones|length %}
+{% set done_ms  = project.milestones|selectattr('status','eq','Completed')|list|length %}
+{% set blocked  = project.milestones|selectattr('status','eq','Blocked')|list|length %}
+{% set total_releases = project.milestones|map(attribute='releases')|map('list')|map('length')|sum %}
+<div class="stats-row">
+  <div class="stat-box">
+    <div class="val">{{ total_ms }}</div>
+    <div class="lbl">Milestones</div>
+  </div>
+  <div class="stat-box">
+    <div class="val" style="color:#27ae60;">{{ done_ms }}</div>
+    <div class="lbl">Completed</div>
+  </div>
+  <div class="stat-box">
+    <div class="val" style="color:#e74c3c;">{{ blocked }}</div>
+    <div class="lbl">Blocked</div>
+  </div>
+  <div class="stat-box">
+    <div class="val" style="color:#3498db;">{{ total_releases }}</div>
+    <div class="lbl">Releases</div>
+  </div>
+</div>
+
+{% if project.description %}
+  <p style="font-size:14px; color:#555; margin-bottom:20px;">
+    {{ project.description }}
+  </p>
+{% endif %}
+
+<!-- Milestones -->
+<div style="display:flex; justify-content:space-between; align-items:center;">
+  <div class="section-title" style="flex:1; margin:0;">Milestones</div>
+  <a href="{{ url_for('milestones.create_milestone', project_id=project.id) }}"
+     class="btn btn-primary btn-sm" style="margin-left:16px;">+ Add Milestone</a>
+</div>
+
+{% if project.milestones %}
+  <table style="margin-top:12px;">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Priority</th>
+        <th>Due Date</th>
+        <th>Releases</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ms in project.milestones %}
+      <tr>
+        <td>
+          <strong>{{ ms.title }}</strong>
+          {% if ms.is_overdue() %}
+            <span class="badge badge-danger" style="margin-left:6px;">Overdue</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if ms.status == 'Completed' %}
+            <span class="badge badge-success">{{ ms.status }}</span>
+          {% elif ms.status == 'Blocked' %}
+            <span class="badge badge-danger">{{ ms.status }}</span>
+          {% elif ms.status == 'In Progress' %}
+            <span class="badge badge-info">{{ ms.status }}</span>
+          {% elif ms.status == 'Cancelled' %}
+            <span class="badge badge-secondary">{{ ms.status }}</span>
+          {% else %}
+            <span class="badge badge-warning">{{ ms.status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if ms.priority == 'Critical' %}
+            <span class="badge badge-danger">{{ ms.priority }}</span>
+          {% elif ms.priority == 'High' %}
+            <span class="badge badge-warning">{{ ms.priority }}</span>
+          {% elif ms.priority == 'Medium' %}
+            <span class="badge badge-info">{{ ms.priority }}</span>
+          {% else %}
+            <span class="badge badge-secondary">{{ ms.priority }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:13px;">{{ ms.due_date.strftime('%d %b %Y') }}</td>
+        <td>
+          {% if ms.releases %}
+            {% for r in ms.releases %}
+              {% if r.status == 'Released' %}
+                <span class="badge badge-success">{{ r.version }}</span>
+              {% elif r.status == 'Approved' %}
+                <span class="badge badge-info">{{ r.version }}</span>
+              {% elif r.status == 'Pending Approval' %}
+                <span class="badge badge-warning">{{ r.version }}</span>
+              {% elif r.status == 'Rolled Back' %}
+                <span class="badge badge-danger">{{ r.version }}</span>
+              {% else %}
+                <span class="badge badge-secondary">{{ r.version }}</span>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <span style="color:#aaa; font-size:12px;">None</span>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <a href="{{ url_for('releases.create_release',
+                       project_id=project.id, milestone_id=ms.id) }}"
+               class="btn btn-primary btn-sm">+ Release</a>
+            {% for r in ms.releases %}
+              <a href="{{ url_for('releases.edit_release',
+                         project_id=project.id,
+                         milestone_id=ms.id,
+                         release_id=r.id) }}"
+                 class="btn btn-secondary btn-sm">{{ r.version }}</a>
+            {% endfor %}
+            <a href="{{ url_for('milestones.edit_milestone',
+                       project_id=project.id, milestone_id=ms.id) }}"
+               class="btn btn-warning btn-sm">Edit</a>
+            <form class="delete-form" method="POST"
+                  action="{{ url_for('milestones.delete_milestone',
+                             project_id=project.id, milestone_id=ms.id) }}"
+                  onsubmit="return confirm('Delete milestone {{ ms.title }}?')">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% else %}
+  <div class="empty">
+    <p>No milestones yet.</p>
+    <a href="{{ url_for('milestones.create_milestone', project_id=project.id) }}"
+       class="btn btn-primary">Add first milestone</a>
+  </div>
+{% endif %}
+
+<!-- Recent Audit Log -->
+<div class="section-title" style="margin-top:32px;">Recent Audit Activity</div>
+{% set recent_logs = project.audit_logs|sort(attribute='timestamp', reverse=True) %}
+{% if recent_logs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Entity</th>
+        <th>Action</th>
+        <th>Field</th>
+        <th>Before</th>
+        <th>After</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in recent_logs[:10] %}
+      <tr>
+        <td style="font-size:12px; color:#888;">
+          {{ log.timestamp.strftime('%d %b %Y %H:%M') }}
+        </td>
+        <td style="font-size:12px;">{{ log.entity_type }} #{{ log.entity_id }}</td>
+        <td>
+          {% if log.action == 'created' %}
+            <span class="badge badge-success">{{ log.action }}</span>
+          {% elif log.action == 'deleted' %}
+            <span class="badge badge-danger">{{ log.action }}</span>
+          {% elif log.action == 'status_change' %}
+            <span class="badge badge-info">{{ log.action }}</span>
+          {% else %}
+            <span class="badge badge-warning">{{ log.action }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px; color:#888;">{{ log.field_changed or '—' }}</td>
+        <td style="font-size:12px; color:#e74c3c;">
+          {{ log.old_value[:30] if log.old_value else '—' }}
+        </td>
+        <td style="font-size:12px; color:#27ae60;">
+          {{ log.new_value[:30] if log.new_value else '—' }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="margin-top:12px;">
+    <a href="{{ url_for('audit.audit_log', project_id=project.id) }}"
+       class="btn btn-secondary btn-sm">View full audit log</a>
+  </div>
+{% else %}
+  <div class="empty" style="padding:20px;">
+    <p>No audit activity yet.</p>
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Release · MilestoneOps{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p style="font-size:12px; color:#888; margin-bottom:4px;">
+      <a href="{{ url_for('projects.list_projects') }}"
+         style="color:#888; text-decoration:none;">Projects</a>
+      /
+      <a href="{{ url_for('projects.view_project', project_id=project_id) }}"
+         style="color:#888; text-decoration:none;">Project</a>
+      / {{ action }} Release
+    </p>
+    <h1>{{ action }} Release</h1>
+    <p style="font-size:13px; color:#666; margin-top:4px;">
+      Milestone: {{ milestone.title }}
+    </p>
+  </div>
+  <a href="{{ url_for('projects.view_project', project_id=project_id) }}"
+     class="btn btn-secondary">Back</a>
+</div>
+
+<!-- State machine diagram — only shown when editing -->
+{% if action == 'Edit' and release %}
+<div class="card" style="margin-bottom:20px; background:#f8f9fa;">
+  <p style="font-size:11px; text-transform:uppercase; color:#888;
+            letter-spacing:0.05em; margin-bottom:10px;">
+    Release Workflow — Controlled State Machine
+  </p>
+  <div style="display:flex; align-items:center; gap:8px;
+              flex-wrap:wrap; font-size:13px;">
+    {% set states = [
+      'Draft', 'Pending Approval', 'Approved', 'Released', 'Rolled Back'
+    ] %}
+    {% for s in states %}
+      {% if s == release.status %}
+        <span class="badge badge-info"
+              style="outline:2px solid #3498db; outline-offset:2px;">
+          {{ s }} ← current
+        </span>
+      {% else %}
+        <span class="badge badge-secondary"
+              style="opacity:0.5;">{{ s }}</span>
+      {% endif %}
+      {% if not loop.last %}
+        <span style="color:#aaa;">→</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if allowed_transitions %}
+    <p style="font-size:12px; color:#555; margin-top:8px;">
+      Allowed next states:
+      {% for t in allowed_transitions %}
+        <strong style="color:#27ae60;">{{ t }}</strong>
+        {% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </p>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="form-wrap">
+  <form method="POST">
+
+    <div class="form-group">
+      <label>Version *</label>
+      <input type="text"
+             name="version"
+             class="form-control"
+             value="{{ form_data.version if form_data.version else '' }}"
+             placeholder="e.g. v1.0.0 or 2.3.1-beta"
+             required />
+      <div class="form-hint">
+        Use semantic versioning: v1.0.0 · 2.3.1-beta · 0.9.0-rc1
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Release Notes</label>
+      <textarea name="release_notes"
+                class="form-control"
+                placeholder="What changed? Breaking changes, fixes, new features...">{{ form_data.release_notes if form_data.release_notes else '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Released By</label>
+      <input type="text"
+             name="released_by"
+             class="form-control"
+             value="{{ form_data.released_by if form_data.released_by else '' }}"
+             placeholder="e.g. jane.doe"
+             maxlength="80" />
+    </div>
+
+    <!-- Status dropdown only shown when editing -->
+    {% if action == 'Edit' and release %}
+    <div class="form-group">
+      <label>Status *</label>
+      <select name="status" class="form-control">
+        <option value="{{ release.status }}" selected>
+          {{ release.status }} (current)
+        </option>
+        {% for t in allowed_transitions %}
+          <option value="{{ t }}">→ {{ t }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-hint">
+        Only valid workflow transitions are shown.
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        {% if action == 'Create' %}Create Release{% else %}Save Changes{% endif %}
+      </button>
+      <a href="{{ url_for('projects.view_project', project_id=project_id) }}"
+         class="btn btn-secondary">Cancel</a>
+
+      <!-- Delete button only shown for Draft releases -->
+      {% if action == 'Edit' and release and release.status == 'Draft' %}
+        <form class="delete-form" method="POST"
+              action="{{ url_for('releases.delete_release',
+                         project_id=project_id,
+                         milestone_id=milestone.id,
+                         release_id=release.id) }}"
+              onsubmit="return confirm('Delete release {{ release.version }}?')"
+              style="margin-left:auto;">
+          <button type="submit" class="btn btn-danger btn-sm">
+            Delete Draft
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+  </form>
+</div>
+{% endblock %}

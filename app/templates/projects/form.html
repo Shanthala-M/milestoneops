@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Project · MilestoneOps{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ action }} Project</h1>
+  <a href="{{ url_for('projects.list_projects') }}" class="btn btn-secondary">Back</a>
+</div>
+
+<div class="form-wrap">
+  <form method="POST">
+
+    <div class="form-group">
+      <label>Project Name *</label>
+      <input type="text"
+             name="name"
+             class="form-control"
+             value="{{ form_data.name if form_data.name else '' }}"
+             placeholder="e.g. API Gateway v2"
+             maxlength="120"
+             required />
+      <div class="form-hint">
+        Letters, numbers, spaces, hyphens and dots only. Max 120 characters.
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Description</label>
+      <textarea name="description"
+                class="form-control"
+                placeholder="Brief description of the project goals...">{{ form_data.description if form_data.description else '' }}</textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Owner *</label>
+        <input type="text"
+               name="owner"
+               class="form-control"
+               value="{{ form_data.owner if form_data.owner else '' }}"
+               placeholder="e.g. jane.doe"
+               maxlength="80"
+               required />
+      </div>
+
+      <div class="form-group">
+        <label>Status *</label>
+        <select name="status" class="form-control">
+          {% for s in ['Active', 'On Hold', 'Archived'] %}
+            <option value="{{ s }}"
+              {% if form_data.status == s %}selected{% endif %}>
+              {{ s }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        {% if action == 'Create' %}Create Project{% else %}Save Changes{% endif %}
+      </button>
+      <a href="{{ url_for('projects.list_projects') }}" class="btn btn-secondary">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

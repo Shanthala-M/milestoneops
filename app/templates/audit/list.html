@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Audit Log · MilestoneOps{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Audit Log</h1>
+    <p style="font-size:13px; color:#666; margin-top:4px;">
+      Immutable record of all system changes · {{ logs|length }} entries shown
+    </p>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="card" style="margin-bottom:20px;">
+  <form method="GET" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+
+    <div class="form-group" style="margin:0; min-width:180px;">
+      <label style="margin-bottom:4px;">Project</label>
+      <select name="project_id" class="form-control">
+        <option value="">All projects</option>
+        {% for p in projects %}
+          <option value="{{ p.id }}"
+            {% if selected_project == p.id %}selected{% endif %}>
+            {{ p.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group" style="margin:0; min-width:150px;">
+      <label style="margin-bottom:4px;">Entity Type</label>
+      <select name="entity_type" class="form-control">
+        <option value="">All types</option>
+        {% for t in ['Project', 'Milestone', 'Release'] %}
+          <option value="{{ t }}"
+            {% if selected_entity == t %}selected{% endif %}>
+            {{ t }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group" style="margin:0; min-width:150px;">
+      <label style="margin-bottom:4px;">Action</label>
+      <select name="action" class="form-control">
+        <option value="">All actions</option>
+        {% for a in ['created', 'updated', 'deleted', 'status_change'] %}
+          <option value="{{ a }}"
+            {% if selected_action == a %}selected{% endif %}>
+            {{ a }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      <a href="{{ url_for('audit.audit_log') }}"
+         class="btn btn-secondary">Reset</a>
+    </div>
+
+  </form>
+</div>
+
+{% if logs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Entity</th>
+        <th>ID</th>
+        <th>Action</th>
+        <th>Field</th>
+        <th>Before</th>
+        <th>After</th>
+        <th>Changed By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td style="font-size:12px; color:#888; white-space:nowrap;">
+          {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+        </td>
+        <td>
+          {% if log.entity_type == 'Project' %}
+            <span class="badge badge-info">{{ log.entity_type }}</span>
+          {% elif log.entity_type == 'Milestone' %}
+            <span class="badge badge-warning">{{ log.entity_type }}</span>
+          {% else %}
+            <span class="badge badge-success">{{ log.entity_type }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px; color:#888;">#{{ log.entity_id }}</td>
+        <td>
+          {% if log.action == 'created' %}
+            <span class="badge badge-success">{{ log.action }}</span>
+          {% elif log.action == 'deleted' %}
+            <span class="badge badge-danger">{{ log.action }}</span>
+          {% elif log.action == 'status_change' %}
+            <span class="badge badge-info">{{ log.action }}</span>
+          {% else %}
+            <span class="badge badge-warning">{{ log.action }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px; color:#888;">
+          {{ log.field_changed or '—' }}
+        </td>
+        <td style="font-size:12px; color:#e74c3c;">
+          {% if log.old_value %}
+            <s>{{ log.old_value[:40] }}</s>
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td style="font-size:12px; color:#27ae60;">
+          {{ log.new_value[:40] if log.new_value else '—' }}
+        </td>
+        <td style="font-size:12px; color:#888;">{{ log.changed_by }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% else %}
+  <div class="empty">
+    <p>No audit entries match the current filters.</p>
+  </div>
+{% endif %}
+
+{% endblock %}

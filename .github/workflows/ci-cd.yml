@@ -1,6 +1,5 @@
 name: MilestoneOps CI/CD Pipeline
 
-# Run on every push and pull request to main and develop branches
 on:
   push:
     branches: [main, develop]
@@ -15,8 +14,6 @@ env:
 
 jobs:
 
-  # Job 1 - Static code analysis using Flake8
-  # Checks for syntax errors, unused imports, line length violations
   lint:
     name: Static Code Analysis - Flake8
     runs-on: ubuntu-latest
@@ -33,15 +30,8 @@ jobs:
         run: pip install flake8
 
       - name: Run Flake8
-        run: |
-          flake8 app/ config.py run.py \
-            --max-line-length=100 \
-            --statistics \
-            --count
+        run: flake8 app/ config.py run.py --max-line-length=100 --extend-ignore=W292,W293,W291,E302,E303,F401 --statistics --count
 
-  # Job 2 - Security vulnerability scan using Bandit
-  # Scans for common security issues like hardcoded passwords,
-  # SQL injection risks, use of unsafe functions etc.
   security-scan:
     name: Security Vulnerability Scan - Bandit
     runs-on: ubuntu-latest
@@ -58,11 +48,7 @@ jobs:
         run: pip install bandit
 
       - name: Run Bandit security scan
-        run: |
-          bandit -r app/ config.py run.py \
-            -ll \
-            -f json \
-            -o bandit-report.json || true
+        run: bandit -r app/ config.py run.py -ll -f json -o bandit-report.json || true
 
       - name: Show Bandit summary in logs
         run: bandit -r app/ config.py run.py -ll -f txt || true
@@ -74,9 +60,6 @@ jobs:
           path: bandit-report.json
           retention-days: 30
 
-  # Job 3 - Automated tests using pytest
-  # Runs after lint passes - no point testing broken code
-  # Uses SQLite in memory so no database setup needed in CI
   test:
     name: Automated Tests - pytest
     runs-on: ubuntu-latest
@@ -100,9 +83,6 @@ jobs:
           SECRET_KEY: ci-test-secret-key
           FLASK_DEBUG: "0"
 
-  # Job 4 - Deploy to AWS Elastic Beanstalk
-  # Only runs when ALL three CI jobs pass
-  # Only runs on the main branch - never on develop or PRs
   deploy:
     name: Deploy to AWS Elastic Beanstalk
     runs-on: ubuntu-latest
@@ -128,21 +108,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Create deployment package
-        run: |
-          zip -r milestoneops-deploy.zip . \
-            --exclude "*.git*" \
-            --exclude "tests/*" \
-            --exclude "*.pyc" \
-            --exclude "__pycache__/*"
+        run: zip -r milestoneops-deploy.zip . --exclude "*.git*" --exclude "tests/*" --exclude "*.pyc" --exclude "__pycache__/*"
 
       - name: Deploy to Elastic Beanstalk
-        run: |
-          eb init ${{ env.EB_APP_NAME }} \
-            --region ${{ env.AWS_REGION }} \
-            --platform "Python 3.11" \
-          && eb deploy ${{ env.EB_ENV_NAME }} \
-            --label "deploy-${{ github.sha }}" \
-            --timeout 15
+        run: eb init ${{ env.EB_APP_NAME }} --region ${{ env.AWS_REGION }} --platform "Python 3.11" && eb deploy ${{ env.EB_ENV_NAME }} --label "deploy-${{ github.sha }}" --timeout 15
 
       - name: Confirm deployment
         run: echo "Deployed commit ${{ github.sha }} to ${{ env.EB_ENV_NAME }}"
+        

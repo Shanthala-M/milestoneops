@@ -200,7 +200,7 @@ class TestReleaseWorkflow:
                 "version": "v1.0.0",
                 "release_notes": "Initial.",
                 "released_by": "alice"
-            },
+            },  
             follow_redirects=True
         )
         release = Release.query.first()

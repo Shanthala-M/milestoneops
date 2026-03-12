@@ -96,7 +96,7 @@ jobs:
       - name: Run pytest
         run: pytest tests/ -v --tb=short
         env:
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
           SECRET_KEY: ci-test-secret-key
           FLASK_DEBUG: "0"
 
